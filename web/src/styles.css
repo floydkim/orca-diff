@@ -338,6 +338,6 @@ button.primary:hover { background: var(--primary-hover); }
 .markdown-page { flex: 1; min-width: 0; --md-change: var(--del-bg); }
 .markdown-page + .markdown-page { --md-change: var(--add-bg); }
 .markdown-page > .panel-title { position: sticky; top: 0; z-index: 1; }
-.markdown-page .md-change, .markdown-page .md-change-line { background: var(--md-change); }
+.markdown-page .md-change, .markdown-page .md-change-line, .markdown-page tr.md-change > :is(th, td) { background: var(--md-change); }
 .markdown-page + .markdown-page { border-left: 1px solid var(--border); }
 .markdown-page .markdown-body { max-width: 980px; margin: auto; padding: 24px; user-select: text; }
