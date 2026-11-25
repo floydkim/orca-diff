@@ -1,7 +1,9 @@
+import { execFile } from 'node:child_process';
 import { timingSafeEqual } from 'node:crypto';
-import { readFile, realpath } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join } from 'node:path';
+import { promisify } from 'node:util';
 import { assertInside, BadRequest, listChanges, readFilePair, readPatch } from '../git/changes.ts';
 import { listBranches, listCommits, listWorktrees, resolveBaseRef } from '../git/history.ts';
 import { git, GitError } from '../git/run.ts';
@@ -115,6 +117,17 @@ const coreRoutes: Routes = {
     });
   },
   'GET /api/file': async ({ wt, query }) => ({ content: await readFile(assertInside(wt, query.get('path') ?? ''), 'utf8') }),
+  // shortcut: macOS Finder(`open -R`)만 지원한다. 다른 OS에서 쓰게 되면 그 OS의 파일 관리자 명령을 추가한다.
+  'POST /api/reveal': async ({ wt, body }) => {
+    const { path } = (body ?? {}) as { path?: unknown };
+    if (typeof path !== 'string' || !path) throw new BadRequest('path가 필요합니다');
+    const abs = assertInside(wt, path);
+    await stat(abs).catch(() => {
+      throw new BadRequest(`워크트리에 없는 파일입니다: ${path}`);
+    });
+    await promisify(execFile)('open', ['-R', abs]);
+    return { ok: true };
+  },
 };
 
 function keyMatches(expected: Buffer, given: string | null): boolean {

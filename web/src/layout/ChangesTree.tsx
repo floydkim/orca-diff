@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Change, Commit, Source } from '../../../server/shared/types.ts';
-import { getChanges, getCommits } from '../api.ts';
+import { getChanges, getCommits, reveal } from '../api.ts';
 import { copyText, useContextMenu } from '../contextMenu.tsx';
 import { formatCommitMessage } from '../feedback/format.ts';
 import { openCommitDialog, useFeedback } from '../feedback/storage.ts';
@@ -93,6 +93,11 @@ export function ChangesTree() {
       { label: '파일에 코멘트', onSelect: () => useFeedback.getState().openDialog({ kind: 'file', source, path: c.path }) },
       'separator',
       { label: '경로 복사', onSelect: () => copyText(c.path, '경로') },
+      {
+        label: 'Finder에서 보기',
+        disabled: source.kind === 'unstaged' && c.status === 'D',
+        onSelect: () => reveal(c.path).catch((err: Error) => toast(`Finder에서 열기 실패: ${err.message}`, 'error')),
+      },
     ]);
   };
   const [groups, setGroups] = useState<Group[]>([]);

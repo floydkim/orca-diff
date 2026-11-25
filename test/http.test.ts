@@ -43,6 +43,14 @@ describe('wt 검증', () => {
   test('워크트리 밖 path는 400', async () => {
     expect((await get('/api/file', { key: KEY, wt: fx.dir, path: '../secret' })).status).toBe(400);
   });
+
+  // 성공 경로는 Finder 창을 띄우므로 테스트하지 않는다
+  test('/api/reveal은 워크트리 밖이거나 없는 파일이면 400', async () => {
+    const reveal = (path: string) =>
+      fetch(`${base}/api/reveal?key=${KEY}`, { method: 'POST', body: JSON.stringify({ wt: fx.dir, path }) });
+    expect((await reveal('../secret')).status).toBe(400);
+    expect((await reveal('no-such.ts')).status).toBe(400);
+  });
 });
 
 describe('라우트', () => {

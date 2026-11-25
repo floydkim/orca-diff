@@ -49,6 +49,7 @@ export const searchCode = (query: string, o: SearchOptions) =>
     word: o.wholeWord ? '1' : '0',
     regex: o.regex ? '1' : '0',
   });
+export const reveal = (path: string) => request<{ ok: true }>('POST', '/api/reveal', {}, { path });
 export const getFile = (path: string) => request<{ content: string }>('GET', '/api/file', { path });
 export const getDefinition = (q: NavQuery) => request<Location[]>('POST', '/api/definition', {}, q);
 export const getReferences = (q: NavQuery) => request<Location[]>('POST', '/api/references', {}, q);
