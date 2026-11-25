@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFeedbackSubmit } from './feedbackSubmit.ts';
 import { detectInstalledFonts, useFontSettings } from './fontSettings.ts';
+import { type ThemeMode, useThemeMode } from './theme.ts';
 
-// 상단 바의 ⚙ 버튼과 설정 팝오버(뷰어 글꼴, 피드백 전송 방식)
+const THEME_OPTIONS: [ThemeMode, string][] = [
+  ['system', '시스템'],
+  ['light', '라이트'],
+  ['dark', '다크'],
+];
+
+// 상단 바의 ⚙ 버튼과 설정 팝오버(테마, 뷰어 글꼴, 피드백 전송 방식)
 export function FontSettingsButton() {
   const { family, size, set } = useFontSettings();
   const [open, setOpen] = useState(false);
   const { submit, setSubmit } = useFeedbackSubmit();
+  const { mode, setMode } = useThemeMode();
   const installed = useMemo(() => (open ? detectInstalledFonts() : []), [open]);
   const fonts = installed.includes(family) ? installed : [family, ...installed];
 
@@ -36,6 +44,14 @@ export function FontSettingsButton() {
       </button>
       {open && (
         <div className="font-popover">
+          <div className="popover-title">테마</div>
+          <div className="toggle">
+            {THEME_OPTIONS.map(([value, label]) => (
+              <button key={value} className={mode === value ? 'active' : ''} aria-pressed={mode === value} onClick={() => setMode(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="popover-title">뷰어 글꼴</div>
           <label>
             글꼴
