@@ -253,10 +253,10 @@ button.primary:hover { background: var(--primary-hover); }
 .monaco-editor.gutter-dragging .selected-text,
 .monaco-editor.gutter-dragging .current-line { background: transparent !important; border: none !important; }
 
-/* 새 파일/삭제 파일 단일 보기 */
-.monaco-editor .full-insert-line { background: var(--add-bg); }
+/* 새 파일/삭제 파일 단일 보기. 줄 배경은 선택 영역 위에 그려지므로 diff와 같은 반투명 색을 쓴다 */
+.monaco-editor .full-insert-line { background: var(--vscode-diffEditor-insertedLineBackground); }
 .monaco-editor .full-insert-margin { background: var(--add-gutter); }
-.monaco-editor .full-delete-line { background: var(--del-bg); }
+.monaco-editor .full-delete-line { background: var(--vscode-diffEditor-removedLineBackground); }
 .monaco-editor .full-delete-margin { background: var(--del-gutter); }
 .file-badge { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 12px; border: 1px solid; }
 .file-badge.new { color: var(--added); border-color: var(--added); background: var(--add-bg); }
