@@ -135,6 +135,16 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
     editor.onKeyUp((e) => {
       if (e.keyCode === monaco.KeyCode.Meta) linkDeco.clear();
     }),
+    // Ctrl+B: Orca가 Cmd+B를 사이드바 토글로 쓰므로 대체 키. Mac 기본값(커서 왼쪽)을 덮으려고 키바인딩으로 등록한다
+    (editor as monaco.editor.IStandaloneCodeEditor).addAction({
+      id: 'orca-diff.goToDeclaration',
+      label: '선언으로 이동',
+      keybindings: [monaco.KeyMod.WinCtrl | monaco.KeyCode.KeyB],
+      run: (ed: monaco.editor.ICodeEditor) => {
+        const pos = ed.getPosition();
+        if (pos) goToDeclaration(pos);
+      },
+    }),
     editor.onKeyDown((e) => {
       const pos = editor.getPosition();
       if (!pos) return;

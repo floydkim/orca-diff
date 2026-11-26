@@ -45,6 +45,14 @@ function attachEditorMenu(editor: monaco.editor.ICodeEditor, opts: EditorMenuOpt
       copySelection(editor);
     }
   });
+  // Orca가 Cmd+F를 가져가므로 Ctrl+F로 찾기를 연다. Mac 기본값(커서 오른쪽)을 덮으려고 키바인딩으로 등록한다
+  // diff 에디터 안쪽 에디터도 런타임에는 StandaloneCodeEditor라 addAction이 있다
+  const findKey = (editor as monaco.editor.IStandaloneCodeEditor).addAction({
+    id: 'orca-diff.find',
+    label: '찾기',
+    keybindings: [monaco.KeyMod.WinCtrl | monaco.KeyCode.KeyF],
+    run: (ed: monaco.editor.ICodeEditor) => ed.getAction('actions.find')?.run(),
+  });
   const menu = editor.onContextMenu((e) => {
     e.event.preventDefault();
     e.event.stopPropagation();
@@ -83,6 +91,7 @@ function attachEditorMenu(editor: monaco.editor.ICodeEditor, opts: EditorMenuOpt
   return {
     dispose() {
       copyKey.dispose();
+      findKey.dispose();
       menu.dispose();
     },
   };
