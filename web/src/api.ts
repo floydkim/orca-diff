@@ -53,6 +53,7 @@ export const reveal = (path: string) => request<{ ok: true }>('POST', '/api/reve
 export const getFile = (path: string) => request<{ content: string }>('GET', '/api/file', { path });
 export const getDefinition = (q: NavQuery) => request<Location[]>('POST', '/api/definition', {}, q);
 export const getReferences = (q: NavQuery) => request<Location[]>('POST', '/api/references', {}, q);
+export const warmTs = (path: string) => request<{ ok: boolean }>('POST', '/api/ts/warm', {}, { path });
 export const getOrca = () => request<{ available: boolean }>('GET', '/api/orca');
 export const getTerminals = () => request<Terminal[]>('GET', '/api/terminals');
 export const send = (handle: string, text: string, submit: boolean) => request<{ ok: true }>('POST', '/api/send', {}, { handle, text, submit });

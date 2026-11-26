@@ -8,7 +8,7 @@ import { assertInside, BadRequest, listChanges, readFilePair, readPatch } from '
 import { listBranches, listCommits, listWorktrees, resolveBaseRef } from '../git/history.ts';
 import { git, GitError } from '../git/run.ts';
 import { searchCode } from '../search.ts';
-import { definition, type NavQuery, references } from '../ts/navigation.ts';
+import { definition, type NavQuery, references, warm } from '../ts/navigation.ts';
 import type { Change, ChangeStatus, Source } from '../shared/types.ts';
 
 export interface RequestContext {
@@ -106,6 +106,12 @@ const coreRoutes: Routes = {
   'GET /api/patch': ({ wt, query }) => readPatch(wt, parseSource(query.get('source')), parseChange(query, wt)),
   'POST /api/definition': ({ wt, body }) => definition(wt, parseNavQuery(body)),
   'POST /api/references': ({ wt, body }) => references(wt, parseNavQuery(body)),
+  'POST /api/ts/warm': async ({ wt, body }) => {
+    const path = (body as { path?: unknown } | null)?.path;
+    if (typeof path !== 'string') throw new BadRequest('path가 필요합니다');
+    await warm(wt, path);
+    return { ok: true };
+  },
   'GET /api/search': ({ wt, query }) => {
     const q = query.get('q') ?? '';
     if (!q.trim()) throw new BadRequest('검색어가 필요합니다');

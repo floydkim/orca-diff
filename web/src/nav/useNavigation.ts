@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import type { Change, Location, Source } from '../../../server/shared/types.ts';
-import { getDefinition, getReferences, type NavQuery } from '../api.ts';
+import { getDefinition, getReferences, type NavQuery, warmTs } from '../api.ts';
 import { monaco } from '../monaco/setup.ts';
 import { getPref, setPref } from '../prefs.ts';
 import { withLoading } from './loading.ts';
@@ -89,8 +89,55 @@ export interface NavHandle extends monaco.IDisposable {
   findUsages(pos: monaco.IPosition): void;
 }
 
+// 파일을 여는 순간 서버의 tsserver가 프로젝트를 미리 읽게 한다(첫 탐색 대기 제거).
+// 워킹트리 diff는 몇 초마다 다시 붙으므로 같은 파일은 5분에 한 번만 보낸다.
+const WARM_INTERVAL_MS = 5 * 60 * 1000;
+const warmedAt = new Map<string, number>();
+function warmUp(path: string) {
+  const last = warmedAt.get(path);
+  if (last !== undefined && Date.now() - last < WARM_INTERVAL_MS) return;
+  warmedAt.set(path, Date.now());
+  warmTs(path).catch(() => warmedAt.delete(path));
+}
+
+// 창·브라우저 탭으로 돌아오거나 에디터 탭을 바꿀 때, 페이지 위에서 마우스가 움직일 때도 미리 읽는다.
+// tsserver는 유휴 10분이면 종료되므로, 오래 자리를 비웠다 돌아와 바로 찾을 때의 대기를 없앤다.
+// Orca에서는 다른 앱에 갔다 와도 visibilitychange가 오지 않고, 다른 패널에 포커스가 있었으면 focus도 늦다.
+// 돌아와서 ⌘+클릭하기 전에는 대개 마우스를 움직이므로 그것으로 잡는다(1분에 한 번만 확인).
+const POINTER_CHECK_MS = 60 * 1000;
+export function useWarmOnFocus() {
+  useEffect(() => {
+    const warmActive = () => {
+      if (document.visibilityState !== 'visible') return;
+      const { tabs, activeTabId } = useStore.getState();
+      const tab = tabs.find((t) => t.id === activeTabId);
+      const path = tab?.kind === 'diff' ? tab.change.path : tab?.path;
+      if (path && TS_EXT.test(path)) warmUp(path);
+    };
+    const unsubscribe = useStore.subscribe((s, prev) => {
+      if (s.activeTabId !== prev.activeTabId) warmActive();
+    });
+    let lastPointer = 0;
+    const onPointer = () => {
+      if (Date.now() - lastPointer < POINTER_CHECK_MS) return;
+      lastPointer = Date.now();
+      warmActive();
+    };
+    window.addEventListener('focus', warmActive);
+    document.addEventListener('visibilitychange', warmActive);
+    window.addEventListener('pointermove', onPointer, { passive: true });
+    return () => {
+      unsubscribe();
+      window.removeEventListener('pointermove', onPointer);
+      window.removeEventListener('focus', warmActive);
+      document.removeEventListener('visibilitychange', warmActive);
+    };
+  }, []);
+}
+
 export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavContext): NavHandle {
   if (!TS_EXT.test(ctx.path)) return { enabled: false, dispose() {}, goToDeclaration() {}, findUsages() {} };
+  warmUp(ctx.path);
   const { toast, setBottomPanel } = useStore.getState();
   const { setPopup, setUsages } = useNavUi.getState();
   const linkDeco = editor.createDecorationsCollection();

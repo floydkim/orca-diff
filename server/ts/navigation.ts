@@ -13,8 +13,13 @@ interface Pos { line: number; offset: number }
 interface FileSpan { file: string; start: Pos; end: Pos }
 interface RefEntry extends FileSpan { lineText?: string; isDefinition?: boolean }
 
+function validatePath(wt: string, path: string): string {
+  if (!TS_EXT.has(extname(path).toLowerCase())) throw new BadRequest('TS/JS 파일만 탐색할 수 있습니다');
+  return assertInside(wt, path);
+}
+
 function validate(wt: string, q: NavQuery): string {
-  if (!TS_EXT.has(extname(q.path).toLowerCase())) throw new BadRequest('TS/JS 파일만 탐색할 수 있습니다');
+  validatePath(wt, q.path);
   if (!Number.isInteger(q.line) || !Number.isInteger(q.column) || q.line < 1 || q.column < 1) {
     throw new BadRequest('잘못된 위치입니다');
   }
@@ -34,6 +39,17 @@ async function withOpenFile<T>(wt: string, q: NavQuery, fn: (server: TsServer, f
       // 열어 둔 내용이 남으면 이후 다른 파일 질의가 옛 내용을 기준으로 답한다
       await server.request('updateOpen', { closedFiles: [file] }).catch(() => undefined);
     }
+  });
+}
+
+// 큰 프로젝트는 tsserver가 처음 파일을 열 때 프로젝트 전체를 읽느라 수 초가 걸린다(TS 파일 수천 개 규모에서 약 5초).
+// 사용자가 파일을 보는 동안 미리 한 번 열었다 닫아 두면 첫 탐색도 바로 끝난다.
+export async function warm(wt: string, path: string): Promise<void> {
+  const file = validatePath(wt, path);
+  const server = TsServer.forWorktree(wt);
+  return server.exclusive(async () => {
+    await server.request('updateOpen', { openFiles: [{ file, fileContent: await readFile(file, 'utf8'), projectRootPath: wt }] });
+    await server.request('updateOpen', { closedFiles: [file] }).catch(() => undefined);
   });
 }
 

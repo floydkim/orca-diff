@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { definition, references } from '../server/ts/navigation.ts';
+import { definition, references, warm } from '../server/ts/navigation.ts';
 import { TsServer } from '../server/ts/tsserver.ts';
 import { gitFixture, type GitFixture } from './helpers/gitFixture.ts';
 
@@ -21,6 +21,12 @@ beforeAll(async () => {
 afterAll(() => TsServer.forWorktree(fx.dir).dispose());
 
 describe('navigation', () => {
+  test('미리 읽어 두기는 TS 파일만 받고, 연 파일을 닫아 이후 질의에 영향을 주지 않는다', async () => {
+    await expect(warm(fx.dir, 'tsconfig.json')).rejects.toThrow('TS/JS 파일만');
+    await warm(fx.dir, 'main.ts');
+    expect(await definition(fx.dir, { path: 'main.ts', line: 3, column: 22 })).toHaveLength(1);
+  });
+
   test('호출 위치에서 선언으로 이동한다', async () => {
     const locs = await definition(fx.dir, { path: 'main.ts', line: 3, column: 22 });
     expect(locs).toEqual([{ path: 'util.ts', line: 1, column: 17, preview: 'export function sum(a: number, b: number) {' }]);

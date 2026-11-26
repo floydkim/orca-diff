@@ -17,7 +17,7 @@ import { FindInFilesPanel, useFindInFilesKey } from './nav/FindInFilesPanel.tsx'
 import { FindUsagesPanel } from './nav/FindUsagesPanel.tsx';
 import { NavLoadingIndicator } from './nav/NavLoadingIndicator.tsx';
 import { UsagesPopup } from './nav/UsagesPopup.tsx';
-import { attachNavigation, type NavHandle, useGlobalNavKeys } from './nav/useNavigation.ts';
+import { attachNavigation, type NavHandle, useGlobalNavKeys, useWarmOnFocus } from './nav/useNavigation.ts';
 import { monaco } from './monaco/setup.ts';
 import { getPref, setPref } from './prefs.ts';
 import type { Source } from '../../server/shared/types.ts';
@@ -213,6 +213,7 @@ export function App() {
   const [bottomHeight, setBottomHeight] = usePanelSize('bottom', 220);
   const bottomOpen = useStore((s) => s.bottomPanel !== null);
   useGlobalNavKeys();
+  useWarmOnFocus();
   useFindInFilesKey();
   const unsentCount = useFeedback((s) => s.comments.filter((c) => !c.sentAt).length);
 
