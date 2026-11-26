@@ -84,11 +84,13 @@ export function Tooltip() {
     box.style.left = `${Math.max(MARGIN, left)}px`;
     box.style.top = `${Math.max(MARGIN, top)}px`;
     box.style.visibility = 'visible';
+    // 모달 <dialog>는 top layer에 있어 z-index로는 위에 못 올라가므로, 툴팁도 popover로 top layer에 올린다
+    if (!box.matches(':popover-open')) box.showPopover();
   }, [tip]);
 
   if (!tip) return null;
   return (
-    <div ref={boxRef} className="tooltip" style={{ left: 0, top: 0, visibility: 'hidden' }} role="tooltip">
+    <div ref={boxRef} className="tooltip" popover="manual" style={{ left: 0, top: 0, visibility: 'hidden' }} role="tooltip">
       {tip.text}
     </div>
   );

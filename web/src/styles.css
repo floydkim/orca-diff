@@ -321,7 +321,7 @@ button.primary:hover { background: var(--primary-hover); }
 .panel-actions { align-items: center; }
 
 /* 앱 자체 툴팁(title 속성 대체) */
-.tooltip { position: fixed; z-index: 1100; pointer-events: none; max-width: 360px; padding: 4px 8px; background: var(--tooltip-bg); color: #fff; font-size: 12px; line-height: 1.4; border-radius: 6px; white-space: pre-line; box-shadow: var(--shadow); }
+.tooltip { position: fixed; inset: auto; margin: 0; border: 0; overflow: visible; z-index: 1100; pointer-events: none; max-width: 360px; padding: 4px 8px; background: var(--tooltip-bg); color: #fff; font-size: 12px; line-height: 1.4; border-radius: 6px; white-space: pre-line; box-shadow: var(--shadow); }
 
 .image-diff { display: flex; gap: 12px; padding: 12px; overflow: auto; }
 .image-diff figure { flex: 1; min-width: 0; margin: 0; }
