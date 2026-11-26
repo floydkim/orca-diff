@@ -187,7 +187,8 @@ input[type='checkbox'] { margin: 0; width: 14px; height: 14px; accent-color: var
 .popup-handle { cursor: grab; user-select: none; touch-action: none; }
 .popup-handle:active { cursor: grabbing; }
 .popup-list { overflow: auto; max-height: 45%; }
-.usage-context { min-height: 0; flex: 1; display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+/* 목록이 짧을 때도 어디까지가 목록인지 보이도록 미리보기는 패널 색으로 구분한다 */
+.usage-context { min-height: 0; flex: 1; display: flex; flex-direction: column; border-top: 1px solid var(--border); background: var(--panel); }
 .usage-context pre { overflow: auto; margin: 0; padding: 8px; line-height: 1.5; user-select: text; }
 .usages-popup .row, .usages-panel .row { gap: 10px; }
 .loc { color: var(--text); flex: none; }
@@ -280,7 +281,7 @@ button.primary:hover { background: var(--primary-hover); }
 /* 방향키로 위로 올라갈 때 고정된 검색 줄에 가려지지 않게 합니다 */
 .find-in-files .row, .find-in-files summary { scroll-margin-top: 36px; }
 .find-in-files:focus { outline: none; }
-.preview mark { background: var(--mark-bg); color: var(--text); border-radius: 2px; }
+.preview mark, .usage-context mark { background: var(--mark-bg); color: var(--text); border-radius: 2px; }
 
 .nav-loading { position: fixed; left: 50%; bottom: 48px; transform: translateX(-50%); z-index: 980; display: flex; align-items: center; gap: 8px; padding: 6px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); white-space: nowrap; }
 .nav-loading .hint { color: var(--dim); font-size: 12px; }

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFile } from '../api.ts';
 import { getPref, setPref } from '../prefs.ts';
 import { useStore } from '../store.ts';
-import { jumpTo, useNavUi } from './useNavigation.ts';
+import { highlight, matchPattern } from './FindInFilesPanel.tsx';
+import { useNavUi } from './useNavigation.ts';
 
 // 커서 근처에 뜨는 선언/사용처 목록(WebStorm 팝업)
 export function UsagesPopup() {
@@ -20,14 +21,21 @@ export function UsagesPopup() {
   const [file, setFile] = useState<{ path: string; lines: string[] | null }>();
   const [size, setSize] = useState(() => getPref('size.usagesPopup', { width: 760, height: 440 }));
 
+  const override = popup?.override;
+  const word = popup?.word;
+  const pattern = useMemo(() => (word ? matchPattern(word, { caseSensitive: true, wholeWord: true, regex: false }) : null), [word]);
   useEffect(() => {
     if (!path) return;
+    if (override?.path === path) {
+      setFile({ path, lines: override.content.split(/\r?\n/) });
+      return;
+    }
     let active = true;
     getFile(path).then(({ content }) => {
       if (active) setFile({ path, lines: content.split(/\r?\n/) });
     }).catch(() => { if (active) setFile({ path, lines: null }); });
     return () => { active = false; };
-  }, [path]);
+  }, [path, override]);
 
   useEffect(() => {
     if (!box.current || !popup) return;
@@ -61,7 +69,7 @@ export function UsagesPopup() {
       else if (e.key === 'ArrowUp') setIndex((i) => Math.max(Math.min(i, locations.length - 1) - 1, 0));
       else if (e.key === 'Enter' && selection && !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement)) {
         setPopup(null);
-        jumpTo(selection);
+        popup.jump(selection);
       } else return;
       e.preventDefault();
       e.stopPropagation();
@@ -100,7 +108,7 @@ export function UsagesPopup() {
         <button
           className="link"
           onClick={() => {
-            setUsages({ title: popup.title, locations: popup.locations });
+            setUsages({ title: popup.title, word: popup.word, locations: popup.locations, jump: popup.jump });
             setBottomPanel('usages');
             setPopup(null);
           }}
@@ -116,22 +124,22 @@ export function UsagesPopup() {
             onClick={() => setIndex(i)}
             onDoubleClick={() => {
               setPopup(null);
-              jumpTo(l);
+              popup.jump(l);
             }}
           >
             <span className="loc">{l.path}:{l.line}</span>
-            <span className="preview">{l.preview}</span>
+            <span className="preview">{highlight(l.preview, pattern)}</span>
           </div>
         ))}
       </div>
       {selection && <div className="usage-context">
         <div className="popup-title">{selection.path}:{selection.line}
-          <button className="link" onClick={() => { setPopup(null); jumpTo(selection); }}>파일 열기</button>
+          <button className="link" onClick={() => { setPopup(null); popup.jump(selection); }}>파일 열기</button>
         </div>
         <pre>{file?.path !== selection.path ? '불러오는 중…' : !file.lines ? '파일을 읽을 수 없습니다.' :
           file.lines.slice(Math.max(0, selection.line - 6), selection.line + 5).map((line, i) => {
             const n = Math.max(1, selection.line - 5) + i;
-            return <div key={n} className={n === selection.line ? 'reveal-line' : ''}>{String(n).padStart(4)}  {line}</div>;
+            return <div key={n} className={n === selection.line ? 'reveal-line' : ''}>{String(n).padStart(4)}  {highlight(line, pattern)}</div>;
           })}</pre>
       </div>}
     </div>

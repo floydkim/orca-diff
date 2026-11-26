@@ -10,15 +10,25 @@ import { type NavEntry, useStore } from '../store.ts';
 
 export const TS_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/i;
 
-export interface UsagesPopupState { references?: boolean; x: number; y: number; title: string; locations: Location[] }
+export interface UsagesPopupState {
+  references?: boolean;
+  x: number;
+  y: number;
+  title: string;
+  locations: Location[];
+  // diff에 보이는 내용으로 질의했으면 그 파일의 미리보기도 같은 내용으로 그린다(워킹트리와 줄이 다를 수 있음)
+  override?: { path: string; content: string };
+  jump: (loc: Location) => void;
+  word: string; // 목록과 미리보기에서 강조할 심볼 이름
+}
 
 export const useNavUi = create<{
   hideImports: boolean;
   toggleImports(): void;
   popup: UsagesPopupState | null;
-  usages: { title: string; locations: Location[] } | null;
+  usages: { title: string; word: string; locations: Location[]; jump: (loc: Location) => void } | null;
   setPopup(p: UsagesPopupState | null): void;
-  setUsages(u: { title: string; locations: Location[] } | null): void;
+  setUsages(u: { title: string; word: string; locations: Location[]; jump: (loc: Location) => void } | null): void;
 }>((set) => ({
   hideImports: getPref('hideImports', true),
   toggleImports: () => set(s => {
@@ -69,7 +79,26 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
   const popupAt = (pos: monaco.IPosition) => {
     const visible = editor.getScrolledVisiblePosition(pos);
     const rect = editor.getDomNode()?.getBoundingClientRect();
-    return { x: (rect?.left ?? 0) + (visible?.left ?? 0), y: (rect?.top ?? 0) + (visible?.top ?? 0) + (visible?.height ?? 18) };
+    const content = ctx.contentOverride();
+    return {
+      x: (rect?.left ?? 0) + (visible?.left ?? 0),
+      y: (rect?.top ?? 0) + (visible?.top ?? 0) + (visible?.height ?? 18),
+      override: content === undefined ? undefined : { path: ctx.path, content },
+      jump,
+      word: wordLabel(pos),
+    };
+  };
+
+  // diff 내용으로 질의한 결과 중 같은 파일은 줄 번호가 diff 기준이므로, 워킹트리 파일 대신 이 diff 에디터에서 연다
+  const tabId = useStore.getState().activeTabId;
+  const jump = (loc: Location) => {
+    if (loc.path !== ctx.path || ctx.contentOverride() === undefined || !editor.getModel()) return jumpTo(loc);
+    const { pushNav, tabs } = useStore.getState();
+    if (currentLocation) pushNav(currentLocation);
+    if (tabs.some((t) => t.id === tabId)) useStore.setState({ activeTabId: tabId });
+    editor.setPosition({ lineNumber: loc.line, column: loc.column });
+    editor.revealPositionInCenter({ lineNumber: loc.line, column: loc.column });
+    editor.focus();
   };
 
   const wordLabel = (pos: monaco.IPosition) => editor.getModel()?.getWordAtPosition(pos)?.word ?? '';
@@ -77,7 +106,7 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
   const findUsages = async (pos: monaco.IPosition) => {
     try {
       const locations = await withLoading('사용처 찾는 중', () => getReferences(query(pos)));
-      setUsages({ title: wordLabel(pos), locations });
+      setUsages({ title: wordLabel(pos), word: wordLabel(pos), locations, jump });
       setBottomPanel('usages');
     } catch (e) {
       toast(`사용처 찾기 실패: ${(e as Error).message}`, 'error');
@@ -99,11 +128,11 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
       if (onDeclaration) {
         const refs = await withLoading('사용처 찾는 중', () => getReferences(query(pos)));
         if (refs.length === 0) toast('사용처가 없습니다');
-        else if (refs.length === 1 && !(useNavUi.getState().hideImports && refs[0].isImport)) jumpTo(refs[0]);
+        else if (refs.length === 1 && !(useNavUi.getState().hideImports && refs[0].isImport)) jump(refs[0]);
         else setPopup({ ...popupAt(pos), references: true, title: wordLabel(pos), locations: refs });
         return;
       }
-      if (locations.length === 1) jumpTo(locations[0]);
+      if (locations.length === 1) jump(locations[0]);
       else setPopup({ ...popupAt(pos), title: `${wordLabel(pos)} 선언 ${locations.length}건`, locations });
     } catch (e) {
       toast(`선언 찾기 실패: ${(e as Error).message}`, 'error');
