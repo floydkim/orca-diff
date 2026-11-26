@@ -21,7 +21,7 @@ import { attachNavigation, type NavHandle, useGlobalNavKeys } from './nav/useNav
 import { monaco } from './monaco/setup.ts';
 import { getPref, setPref } from './prefs.ts';
 import type { Source } from '../../server/shared/types.ts';
-import { diffTabId, type Tab, useStore } from './store.ts';
+import { type Tab, useStore } from './store.ts';
 
 interface EditorMenuOptions {
   path: string;
@@ -117,7 +117,7 @@ function attachDiff(ctx: DiffAttachContext): monaco.IDisposable {
     : attachNavigation(ctx.editors.modified, {
         path: ctx.change.path,
         contentOverride: () => override,
-        origin: { tabId: diffTabId(ctx.source, ctx.change), label: sourceLabel(ctx.source) },
+        origin: { source: ctx.source, change: ctx.change, label: sourceLabel(ctx.source) },
       });
   const onFileComment = () => useFeedback.getState().openDialog({ kind: 'file', source: ctx.source, path: ctx.change.path });
   const sides = ctx.single ? [ctx.single] : (['old', 'new'] as const);

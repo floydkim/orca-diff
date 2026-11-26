@@ -5,7 +5,9 @@ import { getPref, setPref } from '../prefs.ts';
 import { useStore } from '../store.ts';
 import { parseColorized, type Token } from './colorizedLines.ts';
 import { highlight, matchPattern } from './FindInFilesPanel.tsx';
-import { jumpToResult, useNavUi } from './useNavigation.ts';
+import { useSourceDescription } from '../layout/EditorTabs.tsx';
+import { basisTitle } from './FindUsagesPanel.tsx';
+import { basisOf, jumpToResult, useNavUi } from './useNavigation.ts';
 
 // 커서 근처에 뜨는 선언/사용처 목록(WebStorm 팝업)
 export function UsagesPopup() {
@@ -24,6 +26,7 @@ export function UsagesPopup() {
   const [size, setSize] = useState(() => getPref('size.usagesPopup', { width: 760, height: 440 }));
 
   const override = popup?.override;
+  const originDesc = useSourceDescription(popup?.origin?.source ?? null);
   const word = popup?.word;
   const pattern = useMemo(() => (word ? matchPattern(word, { caseSensitive: true, wholeWord: true, regex: false }) : null), [word]);
   useEffect(() => {
@@ -126,7 +129,7 @@ export function UsagesPopup() {
         <button
           className="link"
           onClick={() => {
-            setUsages({ title: popup.title, word: popup.word, locations: popup.locations, origin: popup.origin });
+            setUsages({ title: popup.title, word: popup.word, locations: popup.locations, origin: popup.origin, basis: popup.origin?.label ?? '워킹트리' });
             setBottomPanel('usages');
             setPopup(null);
           }}
@@ -146,6 +149,11 @@ export function UsagesPopup() {
             }}
           >
             <span className="loc">{l.path}:{l.line}</span>
+            {basisOf(l.path, popup.origin) && (
+              <span className="basis-tag" title={basisTitle(l.path === popup.origin?.change?.path ? originDesc : '')}>
+                {basisOf(l.path, popup.origin)}
+              </span>
+            )}
             <span className="preview">{highlight(l.preview, pattern)}</span>
           </div>
         ))}

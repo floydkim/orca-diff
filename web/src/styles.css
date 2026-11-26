@@ -199,6 +199,8 @@ input[type='checkbox'] { margin: 0; width: 14px; height: 14px; accent-color: var
 .usage-context pre { overflow: auto; margin: 0; padding: 8px; line-height: 1.5; user-select: text; }
 .usages-popup .row, .usages-panel .row { gap: 10px; }
 .loc { color: var(--text); flex: none; }
+/* diff에서 찾은 사용처의 파일별 기준(커밋 abc1234 / 워킹트리) */
+.basis-tag { flex: none; margin-left: 6px; color: var(--dim); font-size: 11px; font-weight: normal; }
 .preview { color: var(--dim); overflow: hidden; text-overflow: ellipsis; font-family: 'JetBrains Mono', Menlo, monospace; font-size: 12px; }
 
 button.link { border: none; background: none; color: var(--accent); padding: 0; }

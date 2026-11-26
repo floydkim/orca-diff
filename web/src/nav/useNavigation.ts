@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
-import type { Location } from '../../../server/shared/types.ts';
+import type { Change, Location, Source } from '../../../server/shared/types.ts';
 import { getDefinition, getReferences, type NavQuery } from '../api.ts';
 import { monaco } from '../monaco/setup.ts';
 import { getPref, setPref } from '../prefs.ts';
 import { withLoading } from './loading.ts';
 import { navKeyAction } from './navKeys.ts';
-import { type NavEntry, useStore } from '../store.ts';
+import { diffTabId, type NavEntry, useStore } from '../store.ts';
 
 export const TS_EXT = /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/i;
 
@@ -23,11 +23,11 @@ export interface UsagesPopupState {
 }
 
 // diff 내용(커밋·staged)으로 질의한 결과의 기준. 그 파일 안의 결과는 이 diff 탭 기준 줄 번호다.
-// 함수 대신 데이터로 두어 새로 고침 뒤 복원해도 같은 곳으로 이동한다.
-export interface NavOrigin { tabId: string; path: string; label: string }
+// 함수 대신 데이터로 두어 새로 고침 뒤 복원해도 같은 곳으로 이동한다(탭이 닫혔으면 다시 연다).
+export interface NavOrigin { source: Source; change: Change; label: string }
 
-// 예전 저장본에는 word·origin이 없을 수 있다
-export interface UsagesResult { title: string; word?: string; locations: Location[]; origin?: NavOrigin }
+// 예전 저장본에는 word·origin·basis가 없을 수 있다. basis는 제목에 붙는 기준(예: 커밋 abc1234, 워킹트리)
+export interface UsagesResult { title: string; word?: string; locations: Location[]; origin?: NavOrigin; basis?: string }
 
 export const useNavUi = create<{
   hideImports: boolean;
@@ -62,20 +62,25 @@ interface NavContext {
   path: string;
   // diff의 수정본이 디스크와 다를 때만 그 내용을 돌려준다
   contentOverride: () => string | undefined;
-  // contentOverride가 있을 때 결과의 기준이 되는 diff 탭
-  origin?: { tabId: string; label: string };
+  // contentOverride가 있을 때 결과의 기준이 되는 diff
+  origin?: NavOrigin;
 }
 
-// 결과 위치로 이동한다. 기준 diff와 같은 파일이면 그 diff 탭에서, 아니면 워킹트리 파일로 연다.
+// 결과 파일의 기준. tsserver는 질의한 파일만 diff 내용으로 보고 나머지는 워킹트리에서 읽으므로,
+// diff에서 찾은 결과는 그 파일만 diff 기준이고 다른 파일은 워킹트리 기준이다. diff에서 찾은 게 아니면 null.
+export function basisOf(path: string, origin?: NavOrigin): string | null {
+  if (!origin?.source) return null;
+  return path === origin.change.path ? origin.label : '워킹트리';
+}
+
+// 결과 위치로 이동한다. 기준 diff와 같은 파일이면 그 diff 탭에서(닫혔으면 다시 열어), 아니면 워킹트리 파일로 연다.
 export function jumpToResult(loc: Location, origin?: NavOrigin) {
-  if (!origin || loc.path !== origin.path) return jumpTo(loc);
-  const { tabs, pushNav, revealDiff, toast } = useStore.getState();
-  if (!tabs.some((t) => t.id === origin.tabId)) {
-    toast(`${origin.label} diff 탭이 닫혀 있어 워킹트리 파일로 엽니다. 줄이 다를 수 있습니다`);
-    return jumpTo(loc);
-  }
+  // 예전 형식으로 저장된 결과에는 source가 없다
+  if (!origin?.source || loc.path !== origin.change.path) return jumpTo(loc);
+  const { pushNav, openDiff, revealDiff } = useStore.getState();
   if (currentLocation) pushNav(currentLocation);
-  revealDiff(origin.tabId, { line: loc.line, column: loc.column });
+  openDiff(origin.source, origin.change);
+  revealDiff(diffTabId(origin.source, origin.change), { line: loc.line, column: loc.column });
 }
 
 export interface NavHandle extends monaco.IDisposable {
@@ -110,8 +115,7 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
     };
   };
 
-  const originOf = (): NavOrigin | undefined =>
-    ctx.origin && ctx.contentOverride() !== undefined ? { ...ctx.origin, path: ctx.path } : undefined;
+  const originOf = (): NavOrigin | undefined => (ctx.contentOverride() !== undefined ? ctx.origin : undefined);
   const jump = (loc: Location) => jumpToResult(loc, originOf());
 
   const wordLabel = (pos: monaco.IPosition) => editor.getModel()?.getWordAtPosition(pos)?.word ?? '';
@@ -119,7 +123,7 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
   const findUsages = async (pos: monaco.IPosition) => {
     try {
       const locations = await withLoading('사용처 찾는 중', () => getReferences(query(pos)));
-      setUsages({ title: wordLabel(pos), word: wordLabel(pos), locations, origin: originOf() });
+      setUsages({ title: wordLabel(pos), word: wordLabel(pos), locations, origin: originOf(), basis: originOf()?.label ?? '워킹트리' });
       setBottomPanel('usages');
     } catch (e) {
       toast(`사용처 찾기 실패: ${(e as Error).message}`, 'error');
