@@ -7,9 +7,10 @@ import { useStore } from '../store.ts';
 interface Props {
   leftPaneVisible: boolean;
   onToggleLeftPane: () => void;
+  atBottom: boolean; // 사이드바가 하단에 있으면 숨기기 버튼 아이콘을 그에 맞춘다
 }
 
-export function TopBar({ leftPaneVisible, onToggleLeftPane }: Props) {
+export function TopBar({ leftPaneVisible, onToggleLeftPane, atBottom }: Props) {
   const { branch, base, setBranch, toast } = useStore();
   const [worktrees, setWorktrees] = useState<{ path: string; branch: string | null }[]>([]);
   const [branches, setBranches] = useState<Branches | null>(null);
@@ -32,7 +33,7 @@ export function TopBar({ leftPaneVisible, onToggleLeftPane }: Props) {
   const switchWorktree = (path: string) => {
     location.search = `?${new URLSearchParams({ key: KEY, wt: path, ...(HOST ? { host: HOST } : {}) })}`;
   };
-  const leftPaneLabel = leftPaneVisible ? '왼쪽 패널 숨기기' : '왼쪽 패널 보이기';
+  const leftPaneLabel = leftPaneVisible ? '사이드바 숨기기' : '사이드바 보이기';
 
   return (
     <div className="topbar">
@@ -47,7 +48,7 @@ export function TopBar({ leftPaneVisible, onToggleLeftPane }: Props) {
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
           <rect x="2" y="3" width="12" height="10" rx="1.5" />
-          <path d="M6 3v10" />
+          <path d={atBottom ? 'M2 9.5h12' : 'M6 3v10'} />
         </svg>
       </button>
       <label>

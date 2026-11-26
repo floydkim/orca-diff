@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useFeedbackSubmit } from './feedbackSubmit.ts';
 import { detectInstalledFonts, useFontSettings } from './fontSettings.ts';
+import { type SidebarPosition, useSidebarLayout } from './sidebarLayout.ts';
 import { type ThemeMode, useThemeMode } from './theme.ts';
 
 const THEME_OPTIONS: [ThemeMode, string][] = [
   ['system', '시스템'],
   ['light', '라이트'],
   ['dark', '다크'],
+];
+// 자동: 창 너비가 900px보다 좁으면 하단
+const SIDEBAR_OPTIONS: [SidebarPosition, string][] = [
+  ['auto', '자동'],
+  ['left', '왼쪽'],
+  ['bottom', '하단'],
 ];
 
 // 상단 바의 ⚙ 버튼과 설정 팝오버(테마, 뷰어 글꼴, 피드백 전송 방식)
@@ -15,6 +22,7 @@ export function FontSettingsButton() {
   const [open, setOpen] = useState(false);
   const { submit, setSubmit } = useFeedbackSubmit();
   const { mode, setMode } = useThemeMode();
+  const sidebar = useSidebarLayout();
   const installed = useMemo(() => (open ? detectInstalledFonts() : []), [open]);
   const fonts = installed.includes(family) ? installed : [family, ...installed];
 
@@ -52,6 +60,18 @@ export function FontSettingsButton() {
               </button>
             ))}
           </div>
+          <div className="popover-title">사이드바 위치</div>
+          <div className="toggle">
+            {SIDEBAR_OPTIONS.map(([value, label]) => (
+              <button key={value} className={sidebar.position === value ? 'active' : ''} aria-pressed={sidebar.position === value} onClick={() => sidebar.setPosition(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <label title="자동이면 창 너비가 900px보다 좁을 때 하단으로 내립니다">
+            <input type="checkbox" checked={sidebar.belowTools} onChange={(e) => sidebar.setBelowTools(e.target.checked)} />
+            하단일 때 도구 창 아래에 두기
+          </label>
           <div className="popover-title">뷰어 글꼴</div>
           <label>
             글꼴

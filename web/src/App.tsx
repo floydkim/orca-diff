@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { type DiffAttachContext, DiffTab } from './diff/DiffTab.tsx';
 import { FileTab } from './diff/FileTab.tsx';
 import { BottomPanel } from './layout/BottomPanel.tsx';
@@ -12,6 +12,7 @@ import { Tooltip } from './Tooltip.tsx';
 import { attachComments, type CommentsHandle } from './feedback/commentZones.ts';
 import { CommentDialog, FeedbackPanel } from './feedback/FeedbackPanel.tsx';
 import { useFeedback } from './feedback/storage.ts';
+import { useSidebarLayout } from './settings/sidebarLayout.ts';
 import { FindInFilesPanel, useFindInFilesKey } from './nav/FindInFilesPanel.tsx';
 import { FindUsagesPanel } from './nav/FindUsagesPanel.tsx';
 import { NavLoadingIndicator } from './nav/NavLoadingIndicator.tsx';
@@ -173,8 +174,30 @@ function Toasts() {
   );
 }
 
+// 자동 모드에서 이 너비보다 좁으면 사이드바를 하단으로 내린다
+const NARROW_QUERY = '(max-width: 899px)';
+
+function useNarrow() {
+  const [narrow, setNarrow] = useState(() => matchMedia(NARROW_QUERY).matches);
+  useEffect(() => {
+    const mq = matchMedia(NARROW_QUERY);
+    const onChange = () => setNarrow(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return narrow;
+}
+
 export function App() {
   const [leftPaneVisible, setLeftPaneVisible] = useState(() => getPref('leftPaneVisible', true));
+  const { position: sidebarPosition, belowTools: sidebarBelowTools } = useSidebarLayout();
+  const narrow = useNarrow();
+  const atBottom = sidebarPosition === 'bottom' || (sidebarPosition === 'auto' && narrow);
+  const [sidebarHeight, setSidebarHeight] = usePanelSize('sidebarBottom', 240);
+  // 하단 배치의 Commits 너비는 비율로 저장해 창 너비가 바뀌어도 Changes와 같은 비율을 유지한다
+  const [commitsRatio, setCommitsRatio] = usePanelSize('commitsRatio', 0.4);
+  const sidebarRow = useRef<HTMLDivElement>(null);
+  const rowWidth = () => sidebarRow.current?.clientWidth || 1;
   const [leftWidth, setLeftWidth] = usePanelSize('left', 360);
   const [commitsHeight, setCommitsHeight] = usePanelSize('commits', 320);
   const [bottomHeight, setBottomHeight] = usePanelSize('bottom', 220);
@@ -189,24 +212,52 @@ export function App() {
     setPref('leftPaneVisible', visible, { immediate: true });
   };
 
+  const sidebar = atBottom && leftPaneVisible && (
+    <Fragment key="sidebar">
+      <Splitter direction="horizontal" size={sidebarHeight} onResize={setSidebarHeight} invert />
+      <div id="left-pane" className="sidebar-bottom" ref={sidebarRow} style={{ height: sidebarHeight }}>
+        <div style={{ width: `${commitsRatio * 100}%`, display: 'flex', flex: 'none' }}>
+          <CommitList />
+        </div>
+        <Splitter
+          direction="vertical"
+          size={commitsRatio * rowWidth()}
+          // Changes에도 최소 200px은 남긴다
+          onResize={(px) => setCommitsRatio(Math.min(px, rowWidth() - 200) / rowWidth())}
+          min={200}
+        />
+        <ChangesTree />
+      </div>
+    </Fragment>
+  );
+  const tools = (
+    <Fragment key="tools">
+      {bottomOpen && <Splitter direction="horizontal" size={bottomHeight} onResize={setBottomHeight} invert />}
+      <div style={{ height: bottomOpen ? bottomHeight : 'auto', display: 'flex' }}>
+        <BottomPanel usages={<FindUsagesPanel />} search={<FindInFilesPanel />} feedback={<FeedbackPanel />} feedbackCount={unsentCount} />
+      </div>
+    </Fragment>
+  );
+
   return (
     <div className="app">
-      <TopBar leftPaneVisible={leftPaneVisible} onToggleLeftPane={toggleLeftPane} />
+      <TopBar leftPaneVisible={leftPaneVisible} onToggleLeftPane={toggleLeftPane} atBottom={atBottom} />
       <div className={leftPaneVisible ? 'main' : 'main left-pane-hidden'}>
-        <div id="left-pane" className="left-pane" style={{ width: leftWidth }}>
-          <div style={{ height: commitsHeight, display: 'flex' }}>
-            <CommitList />
-          </div>
-          <Splitter direction="horizontal" size={commitsHeight} onResize={setCommitsHeight} />
-          <ChangesTree />
-        </div>
-        <Splitter direction="vertical" size={leftWidth} onResize={setLeftWidth} min={200} />
+        {!atBottom && (
+          <>
+            <div id="left-pane" className="left-pane" style={{ width: leftWidth }}>
+              <div style={{ height: commitsHeight, display: 'flex' }}>
+                <CommitList />
+              </div>
+              <Splitter direction="horizontal" size={commitsHeight} onResize={setCommitsHeight} />
+              <ChangesTree />
+            </div>
+            <Splitter direction="vertical" size={leftWidth} onResize={setLeftWidth} min={200} />
+          </>
+        )}
         <div className="center-pane">
           <EditorTabs renderTab={renderTab} tabActions={fileCommentButton} />
-          {bottomOpen && <Splitter direction="horizontal" size={bottomHeight} onResize={setBottomHeight} invert />}
-          <div style={{ height: bottomOpen ? bottomHeight : 'auto', display: 'flex' }}>
-            <BottomPanel usages={<FindUsagesPanel />} search={<FindInFilesPanel />} feedback={<FeedbackPanel />} feedbackCount={unsentCount} />
-          </div>
+          {sidebarBelowTools ? [tools, sidebar] : [sidebar, tools]}
         </div>
       </div>
       <UsagesPopup />
