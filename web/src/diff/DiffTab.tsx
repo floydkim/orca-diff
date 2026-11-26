@@ -54,11 +54,12 @@ export interface DiffAttachContext {
 interface Props {
   source: Source;
   change: Change;
+  reveal?: { line: number; column: number }; // 수정본에서 이 줄로 이동
   // 에디터가 준비되거나 내용이 바뀔 때마다 호출된다. 반환한 disposable은 다음 호출 전에 정리된다.
   attach?: (ctx: DiffAttachContext) => monaco.IDisposable | void;
 }
 
-export function DiffTab({ source, change, attach }: Props) {
+export function DiffTab({ source, change, reveal, attach }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
   const singleRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -197,6 +198,24 @@ export function DiffTab({ source, change, attach }: Props) {
       : undefined;
     return () => disposable?.dispose();
   }, [shown, canAttach, attach, source, change, showEditor]);
+
+  // 탐색 결과·뒤로 가기로 이 diff의 특정 줄에 올 때(파일 탭의 reveal과 같은 동작)
+  useEffect(() => {
+    const editor = single === 'new' ? singleRef.current : editorRef.current?.getModifiedEditor();
+    if (!editor || !reveal || !shown) return;
+    const { line, column } = reveal;
+    editor.revealLineInCenter(line);
+    editor.setPosition({ lineNumber: line, column });
+    editor.focus();
+    const deco = editor.createDecorationsCollection([
+      { range: new monaco.Range(line, 1, line, 1), options: { isWholeLine: true, className: 'reveal-line' } },
+    ]);
+    const timer = setTimeout(() => deco.clear(), 1500);
+    return () => {
+      clearTimeout(timer);
+      deco.clear();
+    };
+  }, [reveal, shown, single, showEditor]);
 
   useEffect(() => {
     editorRef.current?.updateOptions(editorFontOptions(font));

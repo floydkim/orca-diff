@@ -18,12 +18,16 @@ export interface UsagesPopupState {
   locations: Location[];
   // diff에 보이는 내용으로 질의했으면 그 파일의 미리보기도 같은 내용으로 그린다(워킹트리와 줄이 다를 수 있음)
   override?: { path: string; content: string };
-  jump: (loc: Location) => void;
+  origin?: NavOrigin;
   word: string; // 목록과 미리보기에서 강조할 심볼 이름
 }
 
-// 새로 고침 뒤 localStorage에서 복원한 결과에는 함수(jump)가 없고, 예전 저장본에는 word도 없다
-export interface UsagesResult { title: string; word?: string; locations: Location[]; jump?: (loc: Location) => void }
+// diff 내용(커밋·staged)으로 질의한 결과의 기준. 그 파일 안의 결과는 이 diff 탭 기준 줄 번호다.
+// 함수 대신 데이터로 두어 새로 고침 뒤 복원해도 같은 곳으로 이동한다.
+export interface NavOrigin { tabId: string; path: string; label: string }
+
+// 예전 저장본에는 word·origin이 없을 수 있다
+export interface UsagesResult { title: string; word?: string; locations: Location[]; origin?: NavOrigin }
 
 export const useNavUi = create<{
   hideImports: boolean;
@@ -58,6 +62,20 @@ interface NavContext {
   path: string;
   // diff의 수정본이 디스크와 다를 때만 그 내용을 돌려준다
   contentOverride: () => string | undefined;
+  // contentOverride가 있을 때 결과의 기준이 되는 diff 탭
+  origin?: { tabId: string; label: string };
+}
+
+// 결과 위치로 이동한다. 기준 diff와 같은 파일이면 그 diff 탭에서, 아니면 워킹트리 파일로 연다.
+export function jumpToResult(loc: Location, origin?: NavOrigin) {
+  if (!origin || loc.path !== origin.path) return jumpTo(loc);
+  const { tabs, pushNav, revealDiff, toast } = useStore.getState();
+  if (!tabs.some((t) => t.id === origin.tabId)) {
+    toast(`${origin.label} diff 탭이 닫혀 있어 워킹트리 파일로 엽니다. 줄이 다를 수 있습니다`);
+    return jumpTo(loc);
+  }
+  if (currentLocation) pushNav(currentLocation);
+  revealDiff(origin.tabId, { line: loc.line, column: loc.column });
 }
 
 export interface NavHandle extends monaco.IDisposable {
@@ -87,29 +105,21 @@ export function attachNavigation(editor: monaco.editor.ICodeEditor, ctx: NavCont
       x: (rect?.left ?? 0) + (visible?.left ?? 0),
       y: (rect?.top ?? 0) + (visible?.top ?? 0) + (visible?.height ?? 18),
       override: content === undefined ? undefined : { path: ctx.path, content },
-      jump,
+      origin: originOf(),
       word: wordLabel(pos),
     };
   };
 
-  // diff 내용으로 질의한 결과 중 같은 파일은 줄 번호가 diff 기준이므로, 워킹트리 파일 대신 이 diff 에디터에서 연다
-  const tabId = useStore.getState().activeTabId;
-  const jump = (loc: Location) => {
-    if (loc.path !== ctx.path || ctx.contentOverride() === undefined || !editor.getModel()) return jumpTo(loc);
-    const { pushNav, tabs } = useStore.getState();
-    if (currentLocation) pushNav(currentLocation);
-    if (tabs.some((t) => t.id === tabId)) useStore.setState({ activeTabId: tabId });
-    editor.setPosition({ lineNumber: loc.line, column: loc.column });
-    editor.revealPositionInCenter({ lineNumber: loc.line, column: loc.column });
-    editor.focus();
-  };
+  const originOf = (): NavOrigin | undefined =>
+    ctx.origin && ctx.contentOverride() !== undefined ? { ...ctx.origin, path: ctx.path } : undefined;
+  const jump = (loc: Location) => jumpToResult(loc, originOf());
 
   const wordLabel = (pos: monaco.IPosition) => editor.getModel()?.getWordAtPosition(pos)?.word ?? '';
 
   const findUsages = async (pos: monaco.IPosition) => {
     try {
       const locations = await withLoading('사용처 찾는 중', () => getReferences(query(pos)));
-      setUsages({ title: wordLabel(pos), word: wordLabel(pos), locations, jump });
+      setUsages({ title: wordLabel(pos), word: wordLabel(pos), locations, origin: originOf() });
       setBottomPanel('usages');
     } catch (e) {
       toast(`사용처 찾기 실패: ${(e as Error).message}`, 'error');

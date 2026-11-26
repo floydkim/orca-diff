@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { Change, Source } from '../../server/shared/types.ts';
 
 export type Tab =
-  | { id: string; kind: 'diff'; source: Source; change: Change }
+  | { id: string; kind: 'diff'; source: Source; change: Change; reveal?: { line: number; column: number } }
   | { id: string; kind: 'file'; path: string; reveal?: { line: number; column: number } };
 
 export type CommitSelection = { mode: 'worktree' } | { mode: 'commits'; shas: string[] }; // shas: 최신 → 오래된 순
@@ -11,7 +11,7 @@ export interface NavEntry { path: string; line: number; column: number; tabId?: 
 export interface Toast { id: number; message: string; tone: 'info' | 'error' }
 
 export const sourceKey = (s: Source) => (s.kind === 'commits' ? `commits:${s.from}..${s.to}` : s.kind);
-const diffTabId = (source: Source, change: Change) => `diff:${sourceKey(source)}:${change.path}`;
+export const diffTabId = (source: Source, change: Change) => `diff:${sourceKey(source)}:${change.path}`;
 
 interface State {
   branch: string | null; // null이면 아직 로드 전
@@ -33,6 +33,8 @@ interface State {
   select(selection: CommitSelection): void;
   openDiff(source: Source, change: Change): void;
   openFile(path: string, reveal?: { line: number; column: number }): void;
+  // 열려 있는 diff 탭으로 가서 수정본의 그 줄로 이동한다
+  revealDiff(tabId: string, reveal: { line: number; column: number }): void;
   closeTab(id: string): void;
   closeOthers(id: string): void;
   closeAll(): void;
@@ -82,6 +84,13 @@ export const useStore = create<State>((set, get) => ({
     }));
   },
 
+  revealDiff: (tabId, reveal) =>
+    set((s) => ({
+      // 같은 줄로 다시 가도 이동하도록 매번 새 객체를 넣는다
+      tabs: s.tabs.map((t) => (t.id === tabId && t.kind === 'diff' ? { ...t, reveal: { ...reveal } } : t)),
+      activeTabId: tabId,
+    })),
+
   closeTab: (id) =>
     set((s) => {
       const idx = s.tabs.findIndex((t) => t.id === id);
@@ -115,7 +124,7 @@ export const useStore = create<State>((set, get) => ({
   // 기록된 탭(예: diff 탭)이 아직 열려 있으면 그 탭으로, 아니면 파일 탭으로 돌아간다
   revealNav: (entry) => {
     const tab = get().tabs.find((t) => t.id === entry.tabId);
-    if (tab && tab.kind === 'diff') set({ activeTabId: tab.id });
+    if (tab && tab.kind === 'diff') get().revealDiff(tab.id, { line: entry.line, column: entry.column });
     else get().openFile(entry.path, { line: entry.line, column: entry.column });
   },
   goForward: (current) => {

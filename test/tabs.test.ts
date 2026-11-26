@@ -21,3 +21,30 @@ describe('탭 닫기', () => {
     expect(useStore.getState().activeTabId).toBeNull();
   });
 });
+
+describe('diff 탭 줄 이동', () => {
+  const source = { kind: 'commits', from: 'abc', to: 'abc' } as const;
+  const change = { path: 'a.ts', status: 'M', binary: false } as const;
+  const diffId = () => useStore.getState().tabs.find((t) => t.kind === 'diff')!.id;
+  const reveal = () => {
+    const tab = useStore.getState().tabs.find((t) => t.kind === 'diff');
+    return tab?.kind === 'diff' ? tab.reveal : undefined;
+  };
+
+  test('revealDiff는 그 탭을 활성화하고, 같은 줄이어도 매번 새 이동 요청을 넣는다', () => {
+    useStore.getState().openDiff(source, change);
+    useStore.getState().openFile('b.ts');
+    useStore.getState().revealDiff(diffId(), { line: 3, column: 1 });
+    const first = reveal();
+    expect(useStore.getState().activeTabId).toBe(diffId());
+    expect(first).toEqual({ line: 3, column: 1 });
+    useStore.getState().revealDiff(diffId(), { line: 3, column: 1 });
+    expect(reveal()).not.toBe(first);
+  });
+
+  test('뒤로 가기로 diff 탭에 돌아오면 기록된 줄로 이동한다', () => {
+    useStore.getState().openDiff(source, change);
+    useStore.getState().revealNav({ path: 'a.ts', line: 7, column: 2, tabId: diffId() });
+    expect(reveal()).toEqual({ line: 7, column: 2 });
+  });
+});

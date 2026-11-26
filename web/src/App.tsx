@@ -20,7 +20,8 @@ import { UsagesPopup } from './nav/UsagesPopup.tsx';
 import { attachNavigation, type NavHandle, useGlobalNavKeys } from './nav/useNavigation.ts';
 import { monaco } from './monaco/setup.ts';
 import { getPref, setPref } from './prefs.ts';
-import { type Tab, useStore } from './store.ts';
+import type { Source } from '../../server/shared/types.ts';
+import { diffTabId, type Tab, useStore } from './store.ts';
 
 interface EditorMenuOptions {
   path: string;
@@ -98,6 +99,9 @@ function attachEditorMenu(editor: monaco.editor.ICodeEditor, opts: EditorMenuOpt
   };
 }
 
+const sourceLabel = (s: Source) =>
+  s.kind === 'commits' ? (s.from === s.to ? `커밋 ${s.to.slice(0, 7)}` : `커밋 ${s.from.slice(0, 7)}..${s.to.slice(0, 7)}`) : s.kind;
+
 // diff에서는 수정본(오른쪽)에서만 탐색한다. 워킹트리 unstaged가 아니면 diff에 보이는 내용 기준으로 질의한다.
 function attachDiff(ctx: DiffAttachContext): monaco.IDisposable {
   const comments = attachComments({
@@ -108,7 +112,13 @@ function attachDiff(ctx: DiffAttachContext): monaco.IDisposable {
     sides: ctx.single ? [ctx.single] : undefined,
   });
   const override = ctx.source.kind === 'unstaged' ? undefined : ctx.pair.modified;
-  const nav = ctx.change.status === 'D' ? undefined : attachNavigation(ctx.editors.modified, { path: ctx.change.path, contentOverride: () => override });
+  const nav = ctx.change.status === 'D'
+    ? undefined
+    : attachNavigation(ctx.editors.modified, {
+        path: ctx.change.path,
+        contentOverride: () => override,
+        origin: { tabId: diffTabId(ctx.source, ctx.change), label: sourceLabel(ctx.source) },
+      });
   const onFileComment = () => useFeedback.getState().openDialog({ kind: 'file', source: ctx.source, path: ctx.change.path });
   const sides = ctx.single ? [ctx.single] : (['old', 'new'] as const);
   const menus = sides.map((side) =>
@@ -157,7 +167,7 @@ function attachFile(editor: monaco.editor.ICodeEditor, path: string): monaco.IDi
 
 function renderTab(tab: Tab) {
   return tab.kind === 'diff' ? (
-    <DiffTab source={tab.source} change={tab.change} attach={attachDiff} />
+    <DiffTab source={tab.source} change={tab.change} reveal={tab.reveal} attach={attachDiff} />
   ) : (
     <FileTab path={tab.path} reveal={tab.reveal} attach={attachFile} />
   );

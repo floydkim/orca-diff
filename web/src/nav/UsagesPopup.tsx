@@ -5,7 +5,7 @@ import { getPref, setPref } from '../prefs.ts';
 import { useStore } from '../store.ts';
 import { parseColorized, type Token } from './colorizedLines.ts';
 import { highlight, matchPattern } from './FindInFilesPanel.tsx';
-import { useNavUi } from './useNavigation.ts';
+import { jumpToResult, useNavUi } from './useNavigation.ts';
 
 // 커서 근처에 뜨는 선언/사용처 목록(WebStorm 팝업)
 export function UsagesPopup() {
@@ -87,7 +87,7 @@ export function UsagesPopup() {
       else if (e.key === 'ArrowUp') setIndex((i) => Math.max(Math.min(i, locations.length - 1) - 1, 0));
       else if (e.key === 'Enter' && selection && !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement)) {
         setPopup(null);
-        popup.jump(selection);
+        jumpToResult(selection, popup.origin);
       } else return;
       e.preventDefault();
       e.stopPropagation();
@@ -126,7 +126,7 @@ export function UsagesPopup() {
         <button
           className="link"
           onClick={() => {
-            setUsages({ title: popup.title, word: popup.word, locations: popup.locations, jump: popup.jump });
+            setUsages({ title: popup.title, word: popup.word, locations: popup.locations, origin: popup.origin });
             setBottomPanel('usages');
             setPopup(null);
           }}
@@ -142,7 +142,7 @@ export function UsagesPopup() {
             onClick={() => setIndex(i)}
             onDoubleClick={() => {
               setPopup(null);
-              popup.jump(l);
+              jumpToResult(l, popup.origin);
             }}
           >
             <span className="loc">{l.path}:{l.line}</span>
@@ -152,7 +152,7 @@ export function UsagesPopup() {
       </div>
       {selection && <div className="usage-context">
         <div className="popup-title">{selection.path}:{selection.line}
-          <button className="link" onClick={() => { setPopup(null); popup.jump(selection); }}>파일 열기</button>
+          <button className="link" onClick={() => { setPopup(null); jumpToResult(selection, popup.origin); }}>파일 열기</button>
         </div>
         <pre>{file?.path !== selection.path ? '불러오는 중…' : !file.lines ? '파일을 읽을 수 없습니다.' :
           file.lines.slice(Math.max(0, selection.line - 6), selection.line + 5).map((line, i) => {
