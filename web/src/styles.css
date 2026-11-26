@@ -254,6 +254,10 @@ button.primary:hover { background: var(--primary-hover); }
 .monaco-editor.gutter-dragging .selected-text,
 .monaco-editor.gutter-dragging .current-line { background: transparent !important; border: none !important; }
 
+/* 줄 전체가 추가/삭제된 경우 Monaco는 글자 강조를 줄 전체에 덧칠한다. GitHub처럼 줄 배경만 보이게 한다.
+   shortcut: Monaco가 줄 전체 장식을 style="left:0;width:100%"로 그리는 데 기댄다. Monaco 업데이트로 마크업이 바뀌면 다시 확인 */
+.monaco-editor .cdr.char-insert[style*="width:100%"],
+.monaco-editor .cdr.char-delete[style*="width:100%"] { background: transparent; }
 /* 새 파일/삭제 파일 단일 보기. 줄 배경은 선택 영역 위에 그려지므로 diff와 같은 반투명 색을 쓴다 */
 .monaco-editor .full-insert-line { background: var(--vscode-diffEditor-insertedLineBackground); }
 .monaco-editor .full-insert-margin { background: var(--add-gutter); }

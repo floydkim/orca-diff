@@ -63,10 +63,11 @@ monaco.editor.defineTheme('github-light', {
     'editorGutter.background': '#FFFFFF',
     'editorIndentGuide.background1': '#EAEEF2',
     'editorWhitespace.foreground': '#D0D7DE',
-    // 줄 배경은 선택 영역 위에 그려지므로 반투명이어야 선택이 보인다(흰 배경에서 #DAFBE1, #FFEBE9, #ABF2BC와 같은 색)
+    // 줄 배경은 선택 영역 위에 그려지므로 반투명이어야 선택이 보인다.
+    // 흰 배경에서 줄은 #DAFBE1, #FFEBE9이 되고, 글자 강조는 줄 배경 위에 겹쳐 #ABF2BC가 된다(GitHub 색)
     'diffEditor.insertedLineBackground': '#6CEF8840',
     'diffEditor.removedLineBackground': '#FFAFA740',
-    'diffEditor.insertedTextBackground': '#57E57980',
+    'diffEditor.insertedTextBackground': '#7CE99780',
     'diffEditor.removedTextBackground': '#FF818266',
     'diffEditorGutter.insertedLineBackground': '#CCFFD8',
     'diffEditorGutter.removedLineBackground': '#FFD7D5',
