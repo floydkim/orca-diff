@@ -134,7 +134,9 @@ input[type='checkbox'] { margin: 0; width: 14px; height: 14px; accent-color: var
 .dot.worktree { color: var(--warn); }
 .empty { padding: 8px; color: var(--dim); }
 .changes-selection { flex: none; min-width: 0; padding: 4px 8px; border-bottom: 1px solid var(--border); background: var(--panel); }
-.changes-selection summary { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 접고 펴는 제목 줄은 배경색으로 내용과 구분한다(패널 여백을 넘어 양 끝까지 채움) */
+.changes-selection summary { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: -4px -8px 0; padding: 4px 8px; background: var(--hover); }
+.changes-selection[open] > summary { border-bottom: 1px solid var(--border-muted); }
 .changes-selection code { color: var(--dim); font-size: 12px; }
 .commit-detail { padding-top: 4px; overflow: auto; }
 .changes-selection > .splitter { margin: 4px -8px -4px; }
