@@ -81,6 +81,21 @@ const OPTION_BUTTONS: { key: keyof SearchOptions; label: string; title: string }
   { key: 'regex', label: '.*', title: '정규식' },
 ];
 
+// Find in Files와 Search Everywhere가 함께 쓰는 검색 옵션 토글
+export function SearchOptionButtons() {
+  const options = useFindInFiles((s) => s.options);
+  const toggle = (key: keyof SearchOptions) => {
+    const next = { ...options, [key]: !options[key] };
+    setPref('searchOptions', next);
+    useFindInFiles.setState({ options: next });
+  };
+  return OPTION_BUTTONS.map(({ key, label, title }) => (
+    <button key={key} className={`search-option ${options[key] ? 'active' : ''}`} aria-pressed={options[key]} title={title} onClick={() => toggle(key)}>
+      {label}
+    </button>
+  ));
+}
+
 export function FindInFilesPanel() {
   const { query, options, focusTick, loading, error, result } = useFindInFiles();
   const input = useRef<HTMLInputElement>(null);
@@ -140,12 +155,6 @@ export function FindInFilesPanel() {
     e.preventDefault();
   };
 
-  const toggle = (key: keyof SearchOptions) => {
-    const next = { ...options, [key]: !options[key] };
-    setPref('searchOptions', next);
-    useFindInFiles.setState({ options: next });
-  };
-
   const summary = (() => {
     if (error) return <span className="search-error">{error}</span>;
     if (!result) return loading ? '검색 중…' : null;
@@ -163,11 +172,7 @@ export function FindInFilesPanel() {
           value={query}
           onChange={(e) => useFindInFiles.setState({ query: e.target.value })}
         />
-        {OPTION_BUTTONS.map(({ key, label, title }) => (
-          <button key={key} className={`search-option ${options[key] ? 'active' : ''}`} aria-pressed={options[key]} title={title} onClick={() => toggle(key)}>
-            {label}
-          </button>
-        ))}
+        <SearchOptionButtons />
         <span className="search-summary">{summary}</span>
       </div>
       {byFile.map(([path, rows]) => (

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Location } from '../../../server/shared/types.ts';
 import { getWorktreeFiles, searchCode } from '../api.ts';
-import { editorSelection, highlight, matchPattern, openFindInFiles, useFindInFiles } from '../nav/FindInFilesPanel.tsx';
+import { editorSelection, highlight, matchPattern, openFindInFiles, SearchOptionButtons, useFindInFiles } from '../nav/FindInFilesPanel.tsx';
 import { jumpTo } from '../nav/useNavigation.ts';
 import { useStore } from '../store.ts';
 import { createDoubleShiftDetector } from './doubleShift.ts';
@@ -134,7 +134,16 @@ export function SearchEverywhere() {
   return (
     <>
       <button onClick={open} title="파일·코드 검색 (Shift 두 번, ⌃P, Orca 밖에서는 ⌘P도 가능)">검색</button>
-      <dialog ref={dialog} className="search-everywhere" aria-label="파일·코드 검색">
+      <dialog
+        ref={dialog}
+        className="search-everywhere"
+        aria-label="파일·코드 검색"
+        onClick={(e) => {
+          // 바깥 딤 영역 클릭도 dialog로 들어오므로, 창 사각형 밖일 때만 닫는다(안쪽 여백 클릭은 무시)
+          const r = e.currentTarget.getBoundingClientRect();
+          if (e.target === e.currentTarget && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom)) e.currentTarget.close();
+        }}
+      >
         <div className="search-everywhere-bar">
           <input
             ref={input}
@@ -155,6 +164,7 @@ export function SearchEverywhere() {
               e.preventDefault();
             }}
           />
+          <SearchOptionButtons />
           <button onClick={() => dialog.current?.close()}>닫기</button>
         </div>
         <div className="finder-results">

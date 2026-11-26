@@ -327,7 +327,9 @@ button.primary:hover { background: var(--primary-hover); }
 .image-diff figure { flex: 1; min-width: 0; margin: 0; }
 .image-diff figcaption { color: var(--dim); margin-bottom: 8px; }
 .image-diff img { display: block; max-width: 100%; height: auto; background: repeating-conic-gradient(#aab2bb 0 25%, #d5dae0 0 50%) 0 0 / 16px 16px; }
-.search-everywhere { width: min(760px, 92vw); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+.search-everywhere { width: min(760px, 92vw); height: 80vh; border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+/* 결과 수에 따라 창 높이가 출렁이지 않게 높이를 고정하고 목록이 남은 공간을 채운다 */
+.search-everywhere[open] { display: flex; flex-direction: column; }
 .search-everywhere-bar { display: flex; gap: 6px; }
 .search-everywhere-bar input { flex: 1; }
 .finder-section { display: flex; align-items: center; gap: 6px; padding: 6px 6px 2px; color: var(--dim); font-size: 12px; font-weight: 600; }
@@ -336,7 +338,7 @@ button.primary:hover { background: var(--primary-hover); }
 .finder-results button.code-hit { display: flex; gap: 12px; align-items: baseline; overflow-wrap: normal; }
 .code-hit .preview { flex: 1; min-width: 0; white-space: nowrap; color: var(--text); }
 .code-hit .meta { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); font-size: 12px; }
-.finder-results { max-height: 65vh; overflow: auto; margin-top: 8px; }
+.finder-results { flex: 1; min-height: 0; overflow: auto; margin-top: 8px; }
 .finder-results button { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; background: var(--bg); overflow-wrap: anywhere; }
 .finder-results button[aria-current=true], .finder-results button:hover { background: var(--selected); }
 .markdown-pages { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-rows: max-content; flex: 1; min-height: 0; overflow: auto; }
