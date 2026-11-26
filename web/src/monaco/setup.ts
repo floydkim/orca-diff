@@ -1,6 +1,6 @@
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/editor/editor.worker.js?worker';
-import { enrich } from './richTokens.ts';
+import { installShiki, shikiThemeRules } from './shikiTokens.ts';
 
 // diff 계산 등에 쓰는 기본 워커만 둔다. 언어 서비스 워커는 쓰지 않는다.
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
@@ -25,13 +25,8 @@ const OFF = {
 monaco.typescript.typescriptDefaults.setModeConfiguration(OFF);
 monaco.typescript.javascriptDefaults.setModeConfiguration(OFF);
 
-// 기본 TS/JS 구문 강조에 함수 호출·속성·상수·연산자 구분을 더한다(기본 등록처럼 처음 쓸 때 불러온다)
-monaco.languages.registerTokensProviderFactory('typescript', {
-  create: async () => enrich((await import('monaco-editor/languages/definitions/typescript/typescript.js')).language),
-});
-monaco.languages.registerTokensProviderFactory('javascript', {
-  create: async () => enrich((await import('monaco-editor/languages/definitions/javascript/javascript.js')).language),
-});
+// TS/JS 구문 강조는 Shiki(TextMate 문법 + GitHub 테마)로 한다
+export const setSyntaxTheme = installShiki(monaco);
 
 // GitHub light (Primer prettylights) 구문 강조
 monaco.editor.defineTheme('github-light', {
@@ -60,9 +55,7 @@ monaco.editor.defineTheme('github-light', {
     { token: 'string.key.json', foreground: '0550AE' },
     { token: 'string.value.json', foreground: '0A3069' },
     { token: 'annotation', foreground: '8250DF' },
-    { token: 'entity.name.function', foreground: '8250DF' },
-    { token: 'property', foreground: '0550AE' },
-    { token: 'keyword.operator', foreground: '0550AE' },
+    ...shikiThemeRules(),
   ],
   colors: {
     'editor.background': '#FFFFFF',
@@ -121,9 +114,7 @@ monaco.editor.defineTheme('github-dark', {
     { token: 'string.key.json', foreground: '79C0FF' },
     { token: 'string.value.json', foreground: 'A5D6FF' },
     { token: 'annotation', foreground: 'D2A8FF' },
-    { token: 'entity.name.function', foreground: 'D2A8FF' },
-    { token: 'property', foreground: '79C0FF' },
-    { token: 'keyword.operator', foreground: '79C0FF' },
+    ...shikiThemeRules(),
   ],
   colors: {
     'editor.background': '#0D1117',
