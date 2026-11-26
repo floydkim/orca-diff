@@ -22,13 +22,16 @@ export interface UsagesPopupState {
   word: string; // 목록과 미리보기에서 강조할 심볼 이름
 }
 
+// 새로 고침 뒤 localStorage에서 복원한 결과에는 함수(jump)가 없고, 예전 저장본에는 word도 없다
+export interface UsagesResult { title: string; word?: string; locations: Location[]; jump?: (loc: Location) => void }
+
 export const useNavUi = create<{
   hideImports: boolean;
   toggleImports(): void;
   popup: UsagesPopupState | null;
-  usages: { title: string; word: string; locations: Location[]; jump: (loc: Location) => void } | null;
+  usages: UsagesResult | null;
   setPopup(p: UsagesPopupState | null): void;
-  setUsages(u: { title: string; word: string; locations: Location[]; jump: (loc: Location) => void } | null): void;
+  setUsages(u: UsagesResult | null): void;
 }>((set) => ({
   hideImports: getPref('hideImports', true),
   toggleImports: () => set(s => {
