@@ -6,6 +6,7 @@ import { formatCommitMessage } from '../feedback/format.ts';
 import { openCommitDialog, useFeedback } from '../feedback/storage.ts';
 import { commitsSource, sourceKey, useStore } from '../store.ts';
 import { buildChangeTree, collectDirPaths, type DirNode } from './changeTree.ts';
+import { Splitter, usePanelSize } from './Splitter.tsx';
 
 const POLL_MS = 3000;
 
@@ -77,6 +78,8 @@ export function ChangesTree() {
   const selectedSha = selection.mode === 'commits' && selection.shas.length === 1 ? selection.shas[0] : null;
   const [commit, setCommit] = useState<Commit>();
   const detail = commit?.sha === selectedSha ? commit : undefined;
+  const [detailHeight, setDetailHeight] = usePanelSize('commitDetail', 160);
+  const detailBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!selectedSha) return;
@@ -231,7 +234,7 @@ export function ChangesTree() {
       {detail ? (
         <details className="changes-selection" key={detail.sha} open>
           <summary title={detail.subject}>{detail.subject}</summary>
-          <div className="commit-detail">
+          <div className="commit-detail" ref={detailBox} style={{ maxHeight: detailHeight }}>
             <div className="commit-detail-who">
               <code>{detail.sha.slice(0, 7)}</code> · {detail.author} &lt;{detail.email}&gt;
             </div>
@@ -241,6 +244,8 @@ export function ChangesTree() {
               <button onClick={() => openCommitDialog(detail)}>💬 커밋에 코멘트</button>
             </div>
           </div>
+          {/* 메시지가 짧으면 내용만큼만 차지하므로, 드래그는 지금 보이는 높이에서 시작한다 */}
+          <Splitter direction="horizontal" size={Math.min(detailHeight, detailBox.current?.offsetHeight ?? detailHeight)} onResize={setDetailHeight} min={40} />
         </details>
       ) : (
         <div className="changes-selection">

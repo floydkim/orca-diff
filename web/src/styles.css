@@ -136,7 +136,8 @@ input[type='checkbox'] { margin: 0; width: 14px; height: 14px; accent-color: var
 .changes-selection { flex: none; min-width: 0; padding: 4px 8px; border-bottom: 1px solid var(--border); background: var(--panel); }
 .changes-selection summary { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .changes-selection code { color: var(--dim); font-size: 12px; }
-.commit-detail { padding-top: 4px; max-height: min(160px, 20vh); overflow: auto; }
+.commit-detail { padding-top: 4px; overflow: auto; }
+.changes-selection > .splitter { margin: 4px -8px -4px; }
 .commit-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0; font: 12px/1.4 'JetBrains Mono', Menlo, monospace; }
 .commit-detail .meta { color: var(--dim); font-size: 12px; }
 .commit-detail-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
