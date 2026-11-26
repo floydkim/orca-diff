@@ -39,17 +39,20 @@ export function UsagesPopup() {
     return () => { active = false; };
   }, [path, override]);
 
-  // 미리보기 줄만 칠하면 문자열·주석 중간부터 시작할 때 색이 깨지므로 파일 전체를 한 번 칠해 둔다
+  // 미리보기 줄만 칠하면 문자열·주석 중간부터 시작할 때 색이 깨지므로 파일 처음부터 칠한다.
+  // 다만 미리보기 마지막 줄까지만 칠하고(여유 200줄), 같은 파일에서 더 아래로 옮길 때만 다시 칠한다.
   const [colored, setColored] = useState<{ file: typeof file; lines: Token[][] }>();
+  const needed = selection ? selection.line + 5 : 0;
   useEffect(() => {
-    // shortcut: 아주 큰 파일은 칠하는 데 오래 걸리므로 색 없이 보여 준다. 느리다는 말이 나오면 미리보기 줄까지만 칠하도록 바꾼다
-    if (!file?.lines || file.lines.length > 20000) return;
+    // shortcut: 아주 아래쪽 줄은 칠하는 데 오래 걸리므로 색 없이 보여 준다. 느리다는 말이 나오면 줄 상태를 캐시하도록 바꾼다
+    if (!file?.lines || needed > 20000) return;
+    if (colored?.file === file && (colored.lines.length >= needed || colored.lines.length >= file.lines.length)) return;
     let active = true;
-    monaco.editor.colorize(file.lines.join('\n'), languageOf(file.path), { tabSize: 4 })
+    monaco.editor.colorize(file.lines.slice(0, needed + 200).join('\n'), languageOf(file.path), { tabSize: 4 })
       .then((html) => { if (active) setColored({ file, lines: parseColorized(html) }); })
       .catch(() => {});
     return () => { active = false; };
-  }, [file]);
+  }, [file, needed, colored]);
   const tokens = colored?.file === file ? colored?.lines : undefined;
 
   useEffect(() => {

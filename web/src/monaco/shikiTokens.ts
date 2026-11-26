@@ -6,6 +6,8 @@ import tsx from 'shiki/langs/tsx.mjs';
 import { EncodedTokenMetadata, INITIAL, type StateStack } from 'shiki/textmate';
 import githubDark from 'shiki/themes/github-dark-default.mjs';
 import githubLight from 'shiki/themes/github-light-default.mjs';
+// 문법 데우기용 예제(JSX·타입·문자열 등이 고루 들어 있는 앱 파일)
+import warmSample from '../nav/UsagesPopup.tsx?raw';
 
 // Monaco 기본 TS/JS 구문 강조 대신 VS Code의 TextMate 문법과 GitHub 공식 테마(Shiki)로 칠한다.
 // 토큰 이름에 색을 그대로 담고(shiki.<hex>), Monaco 테마에는 그 이름마다 같은 색 규칙을 넣는다.
@@ -29,6 +31,19 @@ export function shikiThemeRules(): Monaco.editor.ITokenThemeRule[] {
   return [...colors].map((c) => ({ token: `shiki.${c}`, foreground: c }));
 }
 
+// 문법 정규식은 처음 쓸 때 컴파일되어 첫 파일이 몇 배 느리다(800줄 기준 약 0.4초 → 0.1초).
+// 브라우저가 한가할 때 예제를 몇 줄씩 미리 칠해 컴파일을 끝내 둔다.
+function warmUp(grammar: { tokenizeLine2(line: string, stack: StateStack, timeLimit?: number): { ruleStack: StateStack } }) {
+  const lines = warmSample.split('\n');
+  let i = 0;
+  let stack = INITIAL;
+  const step = (deadline: IdleDeadline) => {
+    while (i < lines.length && deadline.timeRemaining() > 2) stack = grammar.tokenizeLine2(lines[i++], stack, 500).ruleStack;
+    if (i < lines.length) requestIdleCallback(step);
+  };
+  requestIdleCallback(step);
+}
+
 class State implements Monaco.languages.IState {
   constructor(readonly stack: StateStack) {}
   clone() { return this; }
@@ -40,6 +55,7 @@ export function installShiki(monaco: typeof Monaco): (mode: Mode) => void {
   let colorMap: string[] = [];
   const ready = createHighlighterCore({ themes: [githubLight, githubDark], langs: [tsx, jsx], engine: createJavaScriptRegexEngine() }).then((h) => {
     colorMap = h.setTheme(THEMES[mode].name!).colorMap;
+    warmUp(h.getLanguage('tsx'));
     return h;
   });
 
