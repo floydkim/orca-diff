@@ -39,29 +39,29 @@ async function restartServer(key: string): Promise<void> {
   await ensureServer(key);
 }
 
-// 이 워크트리에 이미 열린 orca-diff 탭이 있으면 그 탭의 페이지 id
-async function findExistingTab(wt: string): Promise<{ page: string; url: string } | null> {
+// 이 워크트리에 이미 열린 orca-diff 탭 중 같은 저장소(wt)와 같은 호스트(host)를 보고 있는 탭의 페이지 id
+async function findExistingTab(wt: string, url: string): Promise<string | null> {
+  const wanted = new URL(url).searchParams;
   try {
     const out = JSON.parse((await exec('orca', ['tab', 'list', '--worktree', `path:${wt}`, '--json'])).stdout);
     const tabs: { url?: string; browserPageId?: string }[] = out?.result?.tabs ?? [];
-    const tab = tabs.find((t) => t.url?.startsWith(`http://127.0.0.1:${PORT}/`) && t.browserPageId);
-    return tab ? { page: tab.browserPageId!, url: tab.url! } : null;
+    const tab = tabs.find((t) => {
+      if (!t.url?.startsWith(`http://127.0.0.1:${PORT}/`) || !t.browserPageId) return false;
+      const shown = new URL(t.url).searchParams;
+      return shown.get('wt') === wanted.get('wt') && shown.get('host') === wanted.get('host');
+    });
+    return tab?.browserPageId ?? null;
   } catch {
     return null;
   }
 }
 
+// 같은 저장소를 보는 탭이 있으면 그 탭으로 전환하고, 없으면(다른 저장소·워크트리를 보는 탭뿐이면) 새 탭을 연다
 async function openUrl(url: string, wt: string): Promise<void> {
   try {
-    const existing = await findExistingTab(wt);
+    const existing = await findExistingTab(wt, url);
     if (existing) {
-      await exec('orca', ['tab', 'switch', '--page', existing.page, '--worktree', `path:${wt}`, '--focus']);
-      // 탭이 다른 워크트리를 보고 있으면 이 워크트리로 이동한다(탭 안의 경로는 그대로 두고)
-      const shown = new URL(existing.url).searchParams;
-      const wanted = new URL(url).searchParams;
-      if (shown.get('wt') !== wanted.get('wt') || shown.get('host') !== wanted.get('host')) {
-        await exec('orca', ['goto', '--url', url, '--page', existing.page]);
-      }
+      await exec('orca', ['tab', 'switch', '--page', existing, '--worktree', `path:${wt}`, '--focus']);
       return;
     }
     await exec('orca', ['tab', 'create', '--url', url, '--worktree', `path:${wt}`]);
