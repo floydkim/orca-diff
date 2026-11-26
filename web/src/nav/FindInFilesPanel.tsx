@@ -157,7 +157,8 @@ export function FindInFilesPanel() {
 
   const summary = (() => {
     if (error) return <span className="search-error">{error}</span>;
-    if (!result) return loading ? '검색 중…' : null;
+    // 상단 바에 검색 버튼이 없으므로 빠른 검색 단축키를 여기서 알려 준다
+    if (!result) return loading ? '검색 중…' : '파일·코드 빠른 검색: Shift 두 번 또는 ⌃P';
     const count = `${byFile.length}개 파일, ${result.locations.length}${result.truncated ? '+' : ''}건`;
     return result.truncated ? `${count} (처음 ${result.locations.length}건만 표시)` : count;
   })();

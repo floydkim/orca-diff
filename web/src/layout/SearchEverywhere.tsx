@@ -125,7 +125,6 @@ export function SearchEverywhere() {
 
   return (
     <>
-      <button onClick={open} title="파일·코드 검색 (Shift 두 번, ⌃P, Orca 밖에서는 ⌘P도 가능)">검색</button>
       <dialog
         ref={dialog}
         className="search-everywhere"
