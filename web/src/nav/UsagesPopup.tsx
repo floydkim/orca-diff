@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFile } from '../api.ts';
+import { languageOf, monaco } from '../monaco/setup.ts';
 import { getPref, setPref } from '../prefs.ts';
 import { useStore } from '../store.ts';
+import { parseColorized, type Token } from './colorizedLines.ts';
 import { highlight, matchPattern } from './FindInFilesPanel.tsx';
 import { useNavUi } from './useNavigation.ts';
 
@@ -36,6 +38,19 @@ export function UsagesPopup() {
     }).catch(() => { if (active) setFile({ path, lines: null }); });
     return () => { active = false; };
   }, [path, override]);
+
+  // 미리보기 줄만 칠하면 문자열·주석 중간부터 시작할 때 색이 깨지므로 파일 전체를 한 번 칠해 둔다
+  const [colored, setColored] = useState<{ file: typeof file; lines: Token[][] }>();
+  useEffect(() => {
+    // shortcut: 아주 큰 파일은 칠하는 데 오래 걸리므로 색 없이 보여 준다. 느리다는 말이 나오면 미리보기 줄까지만 칠하도록 바꾼다
+    if (!file?.lines || file.lines.length > 20000) return;
+    let active = true;
+    monaco.editor.colorize(file.lines.join('\n'), languageOf(file.path), { tabSize: 4 })
+      .then((html) => { if (active) setColored({ file, lines: parseColorized(html) }); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [file]);
+  const tokens = colored?.file === file ? colored?.lines : undefined;
 
   useEffect(() => {
     if (!box.current || !popup) return;
@@ -139,7 +154,10 @@ export function UsagesPopup() {
         <pre>{file?.path !== selection.path ? '불러오는 중…' : !file.lines ? '파일을 읽을 수 없습니다.' :
           file.lines.slice(Math.max(0, selection.line - 6), selection.line + 5).map((line, i) => {
             const n = Math.max(1, selection.line - 5) + i;
-            return <div key={n} className={n === selection.line ? 'reveal-line' : ''}>{String(n).padStart(4)}  {highlight(line, pattern)}</div>;
+            const lineTokens = tokens?.[n - 1];
+            return <div key={n} className={n === selection.line ? 'reveal-line' : ''}>{String(n).padStart(4)}  {lineTokens
+              ? lineTokens.map((t, j) => <span key={j} className={t.cls}>{highlight(t.text, pattern)}</span>)
+              : highlight(line, pattern)}</div>;
           })}</pre>
       </div>}
     </div>
