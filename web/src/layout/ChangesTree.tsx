@@ -236,7 +236,7 @@ export function ChangesTree() {
           <summary title={detail.subject}>{detail.subject}</summary>
           <div className="commit-detail" ref={detailBox} style={{ maxHeight: detailHeight }}>
             <div className="commit-detail-who">
-              <code>{detail.sha.slice(0, 7)}</code> · {detail.author} &lt;{detail.email}&gt;
+              <code>{detail.sha.slice(0, 7)}</code> · <code>{detail.author} &lt;{detail.email}&gt;</code>
             </div>
             <pre>{formatCommitMessage(detail)}</pre>
             <div className="commit-detail-footer">
