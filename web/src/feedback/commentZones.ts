@@ -79,6 +79,7 @@ export function attachComments(ctx: Ctx): CommentsHandle {
   const addZone = (side: Side, afterLineNumber: number, domNode: HTMLElement, heightInPx: number) => {
     isolate(domNode);
     fitWidth(side, domNode);
+    domNode.style.translate = `${ctx.editors[side].getScrollLeft()}px`;
     zoneNodes[side].push(domNode);
     // Monaco가 zone의 바깥 노드 폭을 100%로 덮어쓰므로 폭은 안쪽 박스에 준다
     const outer = el('div', 'comment-zone-outer');
@@ -250,9 +251,16 @@ export function attachComments(ctx: Ctx): CommentsHandle {
     ];
   });
 
-  const layoutListeners = sides.map((side) =>
-    ctx.editors[side].onDidLayoutChange(() => zoneNodes[side].forEach((node) => fitWidth(side, node))),
-  );
+  const zoneListeners = sides.flatMap((side) => {
+    const editor = ctx.editors[side];
+    return [
+      editor.onDidLayoutChange(() => zoneNodes[side].forEach((node) => fitWidth(side, node))),
+      editor.onDidScrollChange(({ scrollLeft, scrollLeftChanged }) => {
+        if (!scrollLeftChanged) return;
+        for (const node of zoneNodes[side]) node.style.translate = `${scrollLeft}px`;
+      }),
+    ];
+  });
 
   render();
   const unsubscribe = useFeedback.subscribe((s, prev) => {
@@ -276,7 +284,7 @@ export function attachComments(ctx: Ctx): CommentsHandle {
         rangeDeco[side].clear();
         ctx.editors[side].getDomNode()?.classList.remove('gutter-dragging');
       }
-      layoutListeners.forEach((d) => d.dispose());
+      zoneListeners.forEach((d) => d.dispose());
       clearZones();
     },
   };

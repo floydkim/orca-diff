@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { getPref, setPref } from '../prefs.ts';
 
 const STORAGE_PREFIX = 'orca-review:size:';
@@ -37,20 +37,22 @@ interface Props {
 }
 
 export function Splitter({ direction, size, onResize, invert = false, min = 80 }: Props) {
-  const onPointerDown = (e: React.PointerEvent) => {
-    e.preventDefault();
-    const start = direction === 'vertical' ? e.clientX : e.clientY;
-    const startSize = size;
-    const move = (ev: PointerEvent) => {
-      const delta = (direction === 'vertical' ? ev.clientX : ev.clientY) - start;
-      onResize(Math.max(min, startSize + (invert ? -delta : delta)));
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-  };
-  return <div className={`splitter ${direction}`} onPointerDown={onPointerDown} />;
+  const dragStart = useRef({ position: 0, size: 0 });
+  return (
+    <div
+      className={`splitter ${direction}`}
+      onPointerDown={(e) => {
+        if (!e.isPrimary || e.button !== 0) return;
+        e.preventDefault();
+        dragStart.current = { position: direction === 'vertical' ? e.clientX : e.clientY, size };
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        const position = direction === 'vertical' ? e.clientX : e.clientY;
+        const delta = position - dragStart.current.position;
+        onResize(Math.max(min, dragStart.current.size + (invert ? -delta : delta)));
+      }}
+    />
+  );
 }

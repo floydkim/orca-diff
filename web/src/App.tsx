@@ -203,6 +203,7 @@ export function App() {
   const { position: sidebarPosition, belowTools: sidebarBelowTools } = useSidebarLayout();
   const narrow = useNarrow();
   const atBottom = sidebarPosition === 'bottom' || (sidebarPosition === 'auto' && narrow);
+  const showBottomSidebar = atBottom && leftPaneVisible;
   const emptyViewerMessage = leftPaneVisible
     ? `${atBottom ? '아래' : '왼쪽'}에서 커밋과 파일을 선택하세요`
     : '상단에서 사이드바를 열거나 Shift를 두 번 눌러 파일을 검색하세요';
@@ -226,31 +227,28 @@ export function App() {
     setPref('leftPaneVisible', visible, { immediate: true });
   };
 
-  const sidebar = atBottom && leftPaneVisible && (
+  const sidebar = showBottomSidebar && (
     <Fragment key="sidebar">
-      <Splitter direction="horizontal" size={sidebarHeight} onResize={setSidebarHeight} invert />
-      <div id="left-pane" className="sidebar-bottom" ref={sidebarRow} style={{ height: sidebarHeight }}>
-        <div style={{ width: `${commitsRatio * 100}%`, display: 'flex', flex: 'none' }}>
-          <CommitList />
-        </div>
-        <Splitter
-          direction="vertical"
-          size={commitsRatio * rowWidth()}
-          // Changes에도 최소 200px은 남긴다
-          onResize={(px) => setCommitsRatio(Math.min(px, rowWidth() - 200) / rowWidth())}
-          min={200}
-        />
-        <ChangesAndFiles />
+      <div className="sidebar-bottom-commits" style={{ height: sidebarHeight }}>
+        <CommitList />
       </div>
+      <Splitter
+        direction="vertical"
+        size={commitsRatio * rowWidth()}
+        // Changes에도 최소 200px은 남긴다
+        onResize={(px) => setCommitsRatio(Math.min(px, rowWidth() - 200) / rowWidth())}
+        min={200}
+      />
+      <ChangesAndFiles />
     </Fragment>
   );
   const tools = (
-    <Fragment key="tools">
+    <div key="tools" className="tools-pane">
       {bottomOpen && <Splitter direction="horizontal" size={bottomHeight} onResize={setBottomHeight} invert />}
       <div style={{ height: bottomOpen ? bottomHeight : 'auto', display: 'flex' }}>
         <BottomPanel usages={<FindUsagesPanel />} search={<FindInFilesPanel />} feedback={<FeedbackPanel />} feedbackCount={unsentCount} />
       </div>
-    </Fragment>
+    </div>
   );
 
   return (
@@ -271,7 +269,15 @@ export function App() {
         )}
         <div className="center-pane">
           <EditorTabs renderTab={renderTab} tabActions={fileCommentButton} emptyMessage={emptyViewerMessage} />
-          {sidebarBelowTools ? [tools, sidebar] : [sidebar, tools]}
+          {showBottomSidebar && <Splitter direction="horizontal" size={sidebarHeight} onResize={setSidebarHeight} invert />}
+          <div
+            id={showBottomSidebar ? 'left-pane' : undefined}
+            className={showBottomSidebar ? `sidebar-bottom${sidebarBelowTools ? ' tools-first' : ''}` : undefined}
+            ref={sidebarRow}
+            style={showBottomSidebar ? { gridTemplateColumns: `${commitsRatio * 100}% auto minmax(0, 1fr)` } : undefined}
+          >
+            {sidebarBelowTools ? [tools, sidebar] : [sidebar, tools]}
+          </div>
         </div>
       </div>
       <UsagesPopup />

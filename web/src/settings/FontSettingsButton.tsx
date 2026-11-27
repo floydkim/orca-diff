@@ -70,7 +70,7 @@ export function FontSettingsButton() {
           </div>
           <label title="자동이면 창 너비가 900px보다 좁을 때 하단으로 내립니다">
             <input type="checkbox" checked={sidebar.belowTools} onChange={(e) => sidebar.setBelowTools(e.target.checked)} />
-            하단일 때 도구 창 아래에 두기
+            하단 배치에서 도구 창을 Commits 위에 두기
           </label>
           <div className="popover-title">뷰어 글꼴</div>
           <label>

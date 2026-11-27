@@ -113,7 +113,19 @@ input[type='checkbox'] { margin: 0; width: 14px; height: 14px; accent-color: var
 .main.left-pane-hidden > :is(.left-pane, .splitter.vertical) { display: none; }
 .center-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 /* 좁은 창에서 Commits·Changes를 에디터 아래에 좌우로 둔다 */
-.sidebar-bottom { display: flex; flex: none; min-height: 0; background: var(--panel); }
+.sidebar-bottom {
+  display: grid;
+  grid-template-areas: "commits divider changes" "tools divider changes";
+  flex: none;
+  background: var(--panel);
+}
+.sidebar-bottom.tools-first { grid-template-areas: "tools divider changes" "commits divider changes"; }
+.sidebar-bottom-commits { grid-area: commits; display: flex; min-width: 0; }
+.sidebar-bottom > .splitter.vertical { grid-area: divider; }
+.sidebar-bottom > .changes-and-files { grid-area: changes; contain: size; }
+.sidebar-bottom > .tools-pane { grid-area: tools; min-width: 0; }
+.sidebar-bottom .bottom-panel { min-width: 0; }
+.sidebar-bottom > .tools-pane .bottom-tabs { flex-wrap: wrap; }
 .changes-and-files, .file-browser-pane, .project-files { display: flex; flex-direction: column; flex: 1; min-height: 0; min-width: 0; }
 .file-browser-pane[hidden] { display: none; }
 .tree-panel-toolbar { display: flex; align-items: center; justify-content: space-between; flex: none; padding-right: 4px; border-bottom: 1px solid var(--border); }
@@ -121,7 +133,7 @@ input[type='checkbox'] { margin: 0; width: 14px; height: 14px; accent-color: var
 .project-files button.row:hover { background: var(--hover); }
 .project-files .name { overflow: hidden; text-overflow: ellipsis; }
 
-.splitter { background: var(--border); flex: none; }
+.splitter { background: var(--border); flex: none; touch-action: none; }
 .splitter.vertical { width: 3px; cursor: col-resize; }
 .splitter.horizontal { height: 3px; cursor: row-resize; }
 .splitter:hover { background: var(--accent); }
